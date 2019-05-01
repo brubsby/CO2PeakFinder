@@ -1,4 +1,5 @@
 import argparse
+from datetime import datetime
 import time
 import numpy as np
 
@@ -19,7 +20,15 @@ parser.add_argument('-s', '--seconds-between-requests', dest='seconds_between_re
                     default=300)
 args = parser.parse_args()
 
-measurements = np.ndarray((0, 0))
+data_filename = "{}.npy".format(args.country_code)
+
+try:
+    measurements = np.load(data_filename)
+    measurements = measurements.reshape((-1,3))
+    print("{} loaded from disk, continuing.".format(data_filename))
+except FileNotFoundError:
+    print("Existing {} not found, starting fresh.".format(data_filename))
+    measurements = np.ndarray((0, 0))
 
 
 while True:
@@ -31,9 +40,9 @@ while True:
         json_response = response.json()
         data = json_response['data']
         data_list = [request_time, data['carbonIntensity'], data['fossilFuelPercentage']]
-        print(data_list)
+        print("{}: {}".format(datetime.fromtimestamp(request_time), data_list))
         measurements = np.append(measurements, data_list)
-        np.save(args.country_code, measurements)
+        np.save(data_filename, measurements)
     else:
         raise ValueError(response.content)
 
