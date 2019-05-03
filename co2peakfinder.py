@@ -13,6 +13,12 @@ def above_five_minutes(seconds_string):
     return above
 
 
+def wait_for_modulo_time(modulo_amount):
+    this_modulo_epoch_time = (time.time() // modulo_amount) * modulo_amount
+    next_modulo_epoch_time = this_modulo_epoch_time + modulo_amount
+    time.sleep(next_modulo_epoch_time - time.time())
+
+
 parser = argparse.ArgumentParser(description='')
 parser.add_argument('-c', '--country-code', dest='country_code', help='country code to build a peak hours chart for')
 parser.add_argument('-s', '--seconds-between-requests', dest='seconds_between_requests', type=above_five_minutes,
@@ -30,6 +36,7 @@ except FileNotFoundError:
     print("Existing {} not found, starting fresh.".format(data_filename))
     measurements = np.ndarray((0, 0))
 
+wait_for_modulo_time(args.seconds_between_requests)
 
 while True:
     request_time = time.time()
@@ -46,6 +53,4 @@ while True:
     else:
         raise ValueError(response.content)
 
-    time_elapsed = time.time() - request_time
-    sleep_time = args.seconds_between_requests - time_elapsed
-    time.sleep(sleep_time)
+    wait_for_modulo_time(args.seconds_between_requests)
