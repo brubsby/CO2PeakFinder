@@ -1,4 +1,6 @@
 import argparse
+import datetime
+
 from graph_data import create_data_frames, load_measurements_file
 
 import numpy as np
@@ -17,7 +19,6 @@ def is_weekend(date):
 
 time_of_day_seconds_vectorized = np.vectorize(time_of_day_seconds)
 is_weekend_vectorized = np.vectorize(is_weekend)
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='')
@@ -43,15 +44,27 @@ if __name__ == "__main__":
     weekend_low_tertile = weekend_mean - (weekend_std_dev * TERTILE_Z_SCORE)
     weekend_high_tertile = weekend_mean + (weekend_std_dev * TERTILE_Z_SCORE)
 
-    weekday_off_peak_index = average_data[average_data['weekday_avg'] <= weekday_low_tertile].dropna().index
-    weekday_mid_peak_index = average_data[average_data['weekday_avg'] > weekday_low_tertile].dropna()[
-        average_data['weekday_avg'] < weekday_high_tertile].dropna().index
-    weekday_peak_index = average_data[average_data['weekday_avg'] >= weekday_high_tertile].dropna().index
+    weekday_off_peak_times = average_data[average_data['weekday_avg'] <= weekday_low_tertile].dropna().index.time
+    weekday_mid_peak_times = average_data[average_data['weekday_avg'] > weekday_low_tertile].dropna()[
+        average_data['weekday_avg'] < weekday_high_tertile].dropna().index.time
+    weekday_peak_times = average_data[average_data['weekday_avg'] >= weekday_high_tertile].dropna().index.time
 
-    weekend_off_peak_index = average_data[average_data['weekend_avg'] <= weekend_low_tertile].dropna().index
-    weekend_mid_peak_index = average_data[average_data['weekend_avg'] > weekend_low_tertile].dropna()[
-        average_data['weekend_avg'] < weekend_high_tertile].dropna().index
-    weekend_peak_index = average_data[average_data['weekend_avg'] >= weekend_high_tertile].dropna().index
+    weekend_off_peak_times = average_data[average_data['weekend_avg'] <= weekend_low_tertile].dropna().index.time
+    weekend_mid_peak_times = average_data[average_data['weekend_avg'] > weekend_low_tertile].dropna()[
+        average_data['weekend_avg'] < weekend_high_tertile].dropna().index.time
+    weekend_peak_times = average_data[average_data['weekend_avg'] >= weekend_high_tertile].dropna().index.time
 
-    pass
-    # TODO turn indexes into ranges
+    interval_times = np.array(
+        [datetime.time(hour=minute // 60, minute=minute % 60) for minute in range(0, 60 * 24, MINUTE_RESOLUTION)])
+    
+    weekday_off_peak_mask = np.isin(interval_times, weekday_off_peak_times)
+    weekday_mid_peak_mask = np.isin(interval_times, weekday_mid_peak_times)
+    weekday_peak_mask = np.isin(interval_times, weekday_peak_times)
+
+    weekend_off_peak_mask = np.isin(interval_times, weekend_off_peak_times)
+    weekend_mid_peak_mask = np.isin(interval_times, weekend_mid_peak_times)
+    weekend_peak_mask = np.isin(interval_times, weekend_peak_times)
+
+    for i, time in enumerate(interval_times):
+        # TODO aggregate time intervals from masks
+        pass
