@@ -1,9 +1,10 @@
 import argparse
 import datetime
 
-from graph_data import create_data_frames, load_measurements_file
-
 import numpy as np
+from matplotlib import pyplot as plt
+
+from graph_data import create_data_frames, load_measurements_file
 
 MINUTE_RESOLUTION = 5  # minutes
 TERTILE_Z_SCORE = 0.43073
@@ -12,21 +13,32 @@ PEAKEDNESS_NAMES_DICT = {
     2: "Mid-Peak",
     3: "Peak"
 }
+PEAKEDNESS_COLOR_DICT = {
+    1: "g",
+    2: "y",
+    3: "r"
+}
 
 
 class TimeRange(object):
     """An object encapsulating a start time and an end time"""
 
-    def __init__(self, start, end, name=None):
+    def __init__(self, start, end, intensity_category):
         self.start = start
         self.end = end
-        self.name = name
+        self.intensity_category = intensity_category
 
     def __str__(self):
-        return "{}-{} {}".format(self.start, self.end, self.name)
+        return "{}-{} {}".format(self.start, self.end, self.name())
 
     def span(self):
-        return self.end - self.start
+        return time_diff(self.end, self.start).seconds / 60
+
+    def name(self):
+        return PEAKEDNESS_NAMES_DICT[self.intensity_category]
+
+    def color(self):
+        return PEAKEDNESS_COLOR_DICT[self.intensity_category]
 
 
 def boolean_list_to_number(boolean_list):
@@ -36,6 +48,30 @@ def boolean_list_to_number(boolean_list):
             return counter
         counter += 1
     raise AssertionError("Internal error, peakedness arrays malformed")
+
+
+def time_diff(t1, t2):
+    return datetime.datetime.combine(datetime.date.min, t1) - datetime.datetime.combine(datetime.date.min, t2)
+
+
+def delete_small_ranges(range_list, threshold=15):
+    new_range_list = []
+    for time_range in range_list:
+        if time_range.span() > threshold:
+            new_range_list.append(time_range)
+    new_new_range_list = []
+    last_start_time = None
+    last_peakedness = None
+    for time_range in new_range_list:
+        end_time = time_range.end
+        if last_start_time is not None and last_peakedness == time_range.name:
+            new_new_range_list.pop(-1)
+            new_new_range_list.append(TimeRange(last_start_time, end_time, last_peakedness))
+        else:
+            new_new_range_list.append(time_range)
+        last_start_time = time_range.start
+        last_peakedness = time_range.intensity_category
+    return new_new_range_list
 
 
 def time_of_day_seconds(time):
@@ -53,9 +89,10 @@ def create_ranges(aggregated_list):
             continue
         if last_peakedness != aggregated_list[i]:
             end_time = time
-            ranges.append(TimeRange(start_time, end_time, PEAKEDNESS_NAMES_DICT[last_peakedness]))
+            ranges.append(TimeRange(start_time, end_time, last_peakedness))
             start_time = time
             last_peakedness = aggregated_list[i]
+    ranges.append(TimeRange(start_time, datetime.time.max, aggregated_list[-1]))
     return ranges
 
 
@@ -120,8 +157,23 @@ if __name__ == "__main__":
     weekday_ranges = create_ranges(weekday_aggregated)
     weekend_ranges = create_ranges(weekend_aggregated)
 
-    # weekday_ranges = delete_small_ranges(weekday_aggregated)
-    # weekend_ranges = delete_small_ranges(weekend_aggregated)
+    # weekday_ranges = delete_small_ranges(weekday_ranges)
+    # weekend_ranges = delete_small_ranges(weekend_ranges)
+
+    plt.subplot(2, 1, 1)
+    plt.title("{} Carbon Intensity".format(args.country_code))
+    plt.ylabel("Weekday Avg")
+    plt.plot(average_data.index.time, average_data.weekday_avg)
+    for weekday_range in weekday_ranges:
+        plt.axvspan(weekday_range.start, weekday_range.end, alpha=0.5, facecolor=weekday_range.color())
+
+    plt.subplot(2, 1, 2)
+    plt.ylabel("Weekend Avg")
+    plt.plot(average_data.index.time, average_data.weekend_avg)
+    for weekend_range in weekend_ranges:
+        plt.axvspan(weekend_range.start, weekend_range.end, alpha=0.5, facecolor=weekend_range.color())
+
+    plt.show()
 
     print("Weekday Ranges:")
     for weekday_range in weekday_ranges:
