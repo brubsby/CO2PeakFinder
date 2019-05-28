@@ -8,7 +8,7 @@ from matplotlib import pyplot as plt
 
 from graph_data import create_data_frames, load_measurements_file
 
-MINUTE_RESOLUTION = 5  # minutes
+MINUTE_RESOLUTION = 15  # minutes
 TERTILE_Z_SCORE = 0.43073
 PEAKEDNESS_NAMES_DICT = {
     1: "Off-Peak",
