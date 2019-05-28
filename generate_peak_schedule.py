@@ -162,6 +162,9 @@ if __name__ == "__main__":
 
     data, average_data = create_data_frames(measurements)
 
+    weekday_days = len(np.unique(data.loc[data['is_weekend']].index.date))
+    weekend_days = len(np.unique(data.loc[~data['is_weekend']].index.date))
+
     average_data = smooth_data(average_data)
 
     weekday_mean = average_data['weekday_avg'].mean()
@@ -203,6 +206,10 @@ if __name__ == "__main__":
 
     weekday_ranges = create_ranges(weekday_aggregated)
     weekend_ranges = create_ranges(weekend_aggregated)
+
+    print("Data from {} weekdays and {} weekend days.".format(weekday_days, weekend_days))
+
+    print()
 
     print("Weekday Ranges:")
     for weekday_range in weekday_ranges:
