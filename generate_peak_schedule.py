@@ -1,6 +1,8 @@
 import argparse
 import datetime
 
+import math
+import pandas as pd
 import numpy as np
 from matplotlib import pyplot as plt
 
@@ -54,26 +56,6 @@ def time_diff(t1, t2):
     return datetime.datetime.combine(datetime.date.min, t1) - datetime.datetime.combine(datetime.date.min, t2)
 
 
-def delete_small_ranges(range_list, threshold=15):
-    new_range_list = []
-    for time_range in range_list:
-        if time_range.span() > threshold:
-            new_range_list.append(time_range)
-    new_new_range_list = []
-    last_start_time = None
-    last_peakedness = None
-    for time_range in new_range_list:
-        end_time = time_range.end
-        if last_start_time is not None and last_peakedness == time_range.name:
-            new_new_range_list.pop(-1)
-            new_new_range_list.append(TimeRange(last_start_time, end_time, last_peakedness))
-        else:
-            new_new_range_list.append(time_range)
-        last_start_time = time_range.start
-        last_peakedness = time_range.intensity_category
-    return new_new_range_list
-
-
 def time_of_day_seconds(time):
     return time.hour * 3600 + time.minute * 60 + time.second
 
@@ -100,6 +82,69 @@ def is_weekend(date):
     return date.weekday() > 4
 
 
+def smooth(x, window_len=11, window='hanning'):
+    """smooth the data using a window with requested size.
+
+    This method is based on the convolution of a scaled window with the signal.
+    The signal is prepared by introducing reflected copies of the signal
+    (with the window size) in both ends so that transient parts are minimized
+    in the begining and end part of the output signal.
+
+    input:
+        x: the input signal
+        window_len: the dimension of the smoothing window; should be an odd integer
+        window: the type of window from 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'
+            flat window will produce a moving average smoothing.
+
+    output:
+        the smoothed signal
+
+    example:
+
+    t=linspace(-2,2,0.1)
+    x=sin(t)+randn(len(t))*0.1
+    y=smooth(x)
+
+    see also:
+
+    numpy.hanning, numpy.hamming, numpy.bartlett, numpy.blackman, numpy.convolve
+    scipy.signal.lfilter
+
+    TODO: the window parameter could be the window itself if an array instead of a string
+    NOTE: length(output) != length(input), to correct this: return y[(window_len/2-1):-(window_len/2)] instead of just y.
+    """
+
+    if x.ndim != 1:
+        raise ValueError("smooth only accepts 1 dimension arrays.")
+
+    if x.size < window_len:
+        raise ValueError("Input vector needs to be bigger than window size.")
+
+    if window_len < 3:
+        return x
+
+    if not window in ['flat', 'hanning', 'hamming', 'bartlett', 'blackman']:
+        raise ValueError("Window is on of 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'")
+
+    s = np.r_[x[window_len - 1:0:-1], x, x[-2:-window_len - 1:-1]]
+    # print(len(s))
+    if window == 'flat':  # moving average
+        w = np.ones(window_len, 'd')
+    else:
+        w = eval('np.' + window + '(window_len)')
+
+    y = np.convolve(w / w.sum(), s, mode='valid')
+    return y[math.floor(window_len/2-1):math.floor(-window_len/2)]
+
+
+def smooth_data(data):
+    new_dataframe = pd.DataFrame(index=data.index)
+    columns = list(data)
+    for column in columns:
+        new_dataframe[column] = smooth(data[column])
+    return new_dataframe
+
+
 time_of_day_seconds_vectorized = np.vectorize(time_of_day_seconds)
 is_weekend_vectorized = np.vectorize(is_weekend)
 
@@ -116,6 +161,8 @@ if __name__ == "__main__":
     measurements = load_measurements_file(data_filename)
 
     data, average_data = create_data_frames(measurements)
+
+    average_data = smooth_data(average_data)
 
     weekday_mean = average_data['weekday_avg'].mean()
     weekday_std_dev = average_data['weekday_avg'].std()
@@ -156,9 +203,6 @@ if __name__ == "__main__":
 
     weekday_ranges = create_ranges(weekday_aggregated)
     weekend_ranges = create_ranges(weekend_aggregated)
-
-    # weekday_ranges = delete_small_ranges(weekday_ranges)
-    # weekend_ranges = delete_small_ranges(weekend_ranges)
 
     plt.subplot(2, 1, 1)
     plt.title("{} Carbon Intensity".format(args.country_code))
