@@ -204,6 +204,14 @@ if __name__ == "__main__":
     weekday_ranges = create_ranges(weekday_aggregated)
     weekend_ranges = create_ranges(weekend_aggregated)
 
+    print("Weekday Ranges:")
+    for weekday_range in weekday_ranges:
+        print(weekday_range)
+    print()
+    print("Weekend Ranges:")
+    for weekend_range in weekend_ranges:
+        print(weekend_range)
+
     plt.subplot(2, 1, 1)
     plt.title("{} Carbon Intensity".format(args.country_code))
     plt.ylabel("Weekday Avg")
@@ -218,12 +226,4 @@ if __name__ == "__main__":
         plt.axvspan(weekend_range.start, weekend_range.end, alpha=0.5, facecolor=weekend_range.color())
 
     plt.show()
-
-    print("Weekday Ranges:")
-    for weekday_range in weekday_ranges:
-        print(weekday_range)
-    print()
-    print("Weekend Ranges:")
-    for weekend_range in weekend_ranges:
-        print(weekend_range)
 
