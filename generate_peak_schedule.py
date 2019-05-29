@@ -162,8 +162,8 @@ if __name__ == "__main__":
 
     data, average_data = create_data_frames(measurements)
 
-    weekday_days = len(np.unique(data.loc[data['is_weekend']].index.date))
-    weekend_days = len(np.unique(data.loc[~data['is_weekend']].index.date))
+    weekday_days = len(np.unique(data.loc[~data['is_weekend']].index.date))
+    weekend_days = len(np.unique(data.loc[data['is_weekend']].index.date))
 
     average_data = smooth_data(average_data)
 
